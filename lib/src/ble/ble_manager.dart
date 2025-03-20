@@ -37,7 +37,7 @@ class BleManager {
 
     // Listen to devices owned by the current user
     _devicesSubscription = _db
-        .collection('device_profiles')
+        .collectionGroup('device')
         .where('owner', isEqualTo: user.uid)
         .snapshots()
         .listen((snapshot) {
