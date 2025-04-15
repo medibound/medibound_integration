@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base href="$FLUTTER_BASE_HREF">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="A Flutter web application for Medibound Integration">
+
+  <!-- iOS meta tags & icons -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="medibound_integration">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>Medibound Integration</title>
+  <link rel="manifest" href="manifest.json">
+
+  <script>
+    // The value below is injected by flutter build, do not touch.
+    const serviceWorkerVersion = null;
+  </script>
+  <!-- This script adds the flutter initialization JS code -->
+  <script src="flutter.js" defer></script>
+</head>
+<body>
+  <script>
+    // Debug logging
+    console.log('Current pathname:', window.location.pathname);
+    console.log('Current URL:', window.location.href);
+    
+    // Handle OAuth redirect
+    if (window.location.pathname === '/redirect.html' || 
+        window.location.pathname === '/callback/index.html' || 
+        window.location.pathname === '/callback') {
+      console.log('Handling OAuth callback');
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      const state = urlParams.get('state');
+      
+      console.log('OAuth parameters:', { code, state });
+      
+      if (code) {
+        // Send the code back to the main app
+        window.opener?.postMessage({ 
+          type: 'oauth_redirect', 
+          code: code,
+          state: state 
+        }, '*');
+        
+        console.log('Message sent to opener');
+        // Close the popup
+        window.close();
+      } else {
+        console.error('No code parameter found in URL');
+      }
+    }
+
+    window.addEventListener('load', function(ev) {
+      // Download main.dart.js
+      _flutter.loader.loadEntrypoint({
+        serviceWorker: {
+          serviceWorkerVersion: serviceWorkerVersion,
+        },
+        onEntrypointLoaded: function(engineInitializer) {
+          engineInitializer.initializeEngine().then(function(appRunner) {
+            appRunner.runApp();
+          });
+        }
+      });
+    });
+  </script>
+</body>
+</html>

@@ -67,13 +67,13 @@ class DeviceClient {
   }
 
   // Send record
-  Future<String> sendRecord(String deviceId, Map<String, dynamic> record) async {
+  Future<String> sendRecord(String deviceId, dynamic record) async {
     final response = await http.post(
       Uri.parse('$baseUrl/device/sendRecord'),
       headers: _headers,
       body: jsonEncode({
         'deviceId': deviceId,
-        'record': record,
+        'jsonData': record,
       }),
     );
 

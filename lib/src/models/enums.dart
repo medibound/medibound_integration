@@ -1,9 +1,10 @@
 enum DeviceStatus {
-  idle('Idle'),
-  ready('Ready'),
-  stopped('Stopped'),
-  reset('Reset'),
-  offline('Offline');
+  idle('idle'),
+  ready('ready'),
+  running('running'),
+  stopped('stopped'),
+  reset('reset'),
+  offline('offline');
 
   final String value;
   const DeviceStatus(this.value);
@@ -17,8 +18,8 @@ enum DeviceStatus {
 }
 
 enum DeviceMode {
-  static('Static'),
-  continuous('Continuous');
+  static('static'),
+  continuous('continuous');
 
   final String value;
   const DeviceMode(this.value);
@@ -32,10 +33,10 @@ enum DeviceMode {
 }
 
 enum DeviceAction {
-  start('Start'),
-  stop('Stop'),
-  reset('Reset'),
-  none('Null');
+  start('start'),
+  stop('stop'),
+  reset('reset'),
+  none('null');
 
   final String value;
   const DeviceAction(this.value);
