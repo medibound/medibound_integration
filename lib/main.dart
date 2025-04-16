@@ -70,13 +70,9 @@ class _EHRIntegrationPageState extends State<EHRIntegrationPage> {
       
       // Launch the OAuth flow
       final tokens = await integration.launchOAuth();
+
+      print(tokens);
       
-      print('=== OAuth Response for $type ===');
-      print('Access Token: ${tokens['access_token']}');
-      print('Refresh Token: ${tokens['refresh_token']}');
-      print('Expires In: ${tokens['expires_in']}');
-      print('Token Type: ${tokens['token_type']}');
-      print('============================');
 
       setState(() {
         _connectionStatus[type] = true;
@@ -87,7 +83,11 @@ class _EHRIntegrationPageState extends State<EHRIntegrationPage> {
       _currentPatientId = "example-patient-id";
       
       // After successful connection, fetch patient data
-      await _fetchPatientData(type);
+      _currentPatient = await integration.getPatient(tokens['patient_id']);
+      _currentMedications = await integration.getMedications(tokens['patient_id']);
+      print(_currentPatient);
+      print(_currentMedications);
+      //await _fetchPatientData(type);
     } catch (e) {
       print('Failed to connect to $type: $e');
       ScaffoldMessenger.of(context).showSnackBar(

@@ -11,7 +11,7 @@ class CernerIntegration extends MbIntegration {
   CernerIntegration({
     String? redirectUri,
   }) : super(
-          clientId: 'medibound_cerner_app',
+          clientId: 'f2281c3d-a1a3-47f8-8834-2ceece46c09a',
           clientSecret: 'cerner_secret',  // Cerner may use confidential clients
           redirectUri: redirectUri ?? 'medibound://',
           scope: 'patient/Patient.read patient/Medication.read patient/MedicationRequest.read patient/Condition.read offline_access',
@@ -75,15 +75,5 @@ class CernerIntegration extends MbIntegration {
     }
   }
   
-  @override
-  Future<String?> getAccessToken() async {
-    try {
-      final token = await _oauth2Helper.getToken();
-      return token?.accessToken;
-    } catch (e) {
-      // Fall back to stored token or handle the error
-      print('Error getting access token from OAuth2Helper: $e');
-      return super.getAccessToken();
-    }
-  }
+  
 } 

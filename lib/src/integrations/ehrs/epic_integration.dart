@@ -13,13 +13,13 @@ class EpicIntegration extends MbIntegration {
   EpicIntegration({
     String? redirectUri,
   }) : super(
-          clientId: 'e403f2cb-eb7d-4a8b-b6e3-5e408371766f',
-          clientSecret: '',  // Epic uses public clients, so client secret is empty
+          clientId: '8754fac7-08cc-48f8-be35-1bcfe7da68b8',
+          clientSecret: 'EdH2a7u1/a+rrQQDhH/rKLekvTC5yrEUuTapbpa9GyyvEk8BSefc4AAeB81Q9HgylEhfiSv/Md6xCModP4UFSg==',  // Epic uses public clients, so client secret is empty
           redirectUri: redirectUri ?? (kIsWeb ? 'http://localhost:58398/redirect.html' : 'medibound://'),
           scope: 'launch/patient patient/Patient.read patient/Medication.read patient/MedicationRequest.read patient/Condition.read fhirUser',
-          fhirEndpoint: 'https://fhir.epic.com/interconnect-fhir-oauth/api/fhir/r4',
-          tokenUrl: 'https://fhir.epic.com/interconnect-fhir-oauth/oauth2/token',
-          authUrl: 'https://fhir.epic.com/interconnect-fhir-oauth/oauth2/authorize',
+          fhirEndpoint: 'https://ssrx.ksnet.com/FhirProxy/api/fhir/r4/',
+          tokenUrl: 'https://ssrx.ksnet.com/FhirProxy/oauth2/token',
+          authUrl: 'https://ssrx.ksnet.com/FhirProxy/oauth2/authorize',
           type: IntegrationType.epic,
         ) {
     
@@ -46,7 +46,11 @@ class EpicIntegration extends MbIntegration {
         'aud': fhirEndpoint,
       },
       accessTokenParams: {
-        'client_id': clientId,
+        'grant_type': 'authorization_code',
+        
+      },
+      accessTokenHeaders: {
+        'Authorization': 'Basic ${base64Encode(utf8.encode('$clientId:$clientSecret'))}',
       }
     );
   }
@@ -60,19 +64,20 @@ class EpicIntegration extends MbIntegration {
       }
       
       // Update internal token state
-      updateTokens({
+
+
+      final tokenData = {
         'access_token': token.accessToken,
         'refresh_token': token.refreshToken,
         'expires_in': token.expiresIn,
+        'expiration_date': token.expirationDate,
         'token_type': token.tokenType,
-      });
-      
-      return {
-        'access_token': token.accessToken,
-        'refresh_token': token.refreshToken,
-        'expires_in': token.expiresIn,
-        'token_type': token.tokenType,
+        'patient_id': token.respMap['patient'],
       };
+
+      updateTokens(tokenData);
+      
+      return tokenData;
     } catch (e) {
       print('OAuth error: $e');
       
@@ -92,17 +97,6 @@ class EpicIntegration extends MbIntegration {
       throw Exception('OAuth failed: $e');
     }
   }
-  
-  @override
-  Future<String?> getAccessToken() async {
-    try {
-      final token = await _oauth2Helper.getToken();
-      return token?.accessToken;
-    } catch (e) {
-      // Fall back to stored token or handle the error
-      print('Error getting access token from OAuth2Helper: $e');
-      return super.getAccessToken();
-    }
-  }
+
 }
 
