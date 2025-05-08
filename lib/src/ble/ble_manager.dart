@@ -58,14 +58,7 @@ class BleManager {
           .limit(1)
           .get();
       if (deviceDocs.docs.isEmpty) {
-        print('Device profile not found for ID: $deviceId');
-        return;
-      }
-      final deviceDoc = deviceDocs.docs.first;
-
-      final secretKey = deviceDoc.data()['secret_key']['secret'] as String?;
-      if (secretKey == null) {
-        print('Secret key not found for device: $deviceId');
+        print('Device not found for ID: $deviceId');
         return;
       }
 
@@ -96,26 +89,11 @@ class BleManager {
       
       final key = String.fromCharCodes(data);
       
-      final encryptedApiKey = key as String;
-            
-      // Parse the secret key to get the three components
-      final secretKeyParts = secretKey.split('-');
-      if (secretKeyParts.length != 3) {
-        print('Invalid secret key format: $secretKey');
-        device.disconnect();
-        return;
-      }
-
-      final secretDeviceId = secretKeyParts[1];
-      final actualApiKey = secretKeyParts[2];
-
-      // Decode the API key
-      final decodedApiKey = _decodeApiKey(encryptedApiKey, secretKey);
-      print('Decoded Key: $decodedApiKey');
-
+      final rawApiKey = key as String;
+        
       // Make API call to verify the key matches
       final response = await http.get(
-        Uri.parse('https://api.medibound.com/device/confirmKey?deviceId=$secretDeviceId&key=$decodedApiKey'),
+        Uri.parse('https://api.medibound.com/device/confirmKey?deviceId=$deviceId&key=$rawApiKey'),
       );
 
       final responseData = jsonDecode(response.body);
@@ -132,12 +110,12 @@ class BleManager {
       }
 
       // Send authentication command with the actual API key
-      final authAction = 'auth $actualApiKey';
+      final authAction = 'auth $rawApiKey';
       await actionCharacteristic.write(utf8.encode(authAction));
       print('Device authenticated successfully: $deviceId');
 
       // Set device status to ready after successful authentication
-      final mediboundClient = DeviceClient(baseUrl: 'https://api.medibound.com', apiKey: actualApiKey);
+      final mediboundClient = DeviceClient(baseUrl: 'https://api.medibound.com', apiKey: rawApiKey);
       await mediboundClient.setStatus(deviceId.substring(2), DeviceStatus.ready);
 
       // Set up characteristic notifications
