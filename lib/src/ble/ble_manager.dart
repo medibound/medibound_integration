@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:http/http.dart' as http;
 import 'package:medibound_integration/src/device_client.dart';
 import '../models/enums.dart';
 
@@ -45,30 +46,6 @@ class BleManager {
 
   BleManager._internal();
 
-  // Helper function to decode the encrypted API key
-  String _decodeApiKey(String encryptedKey, String secretKey) {
-    try {
-      final secretBytes = latin1.encode(secretKey);
-      final encryptedBytes = <int>[];
-
-      // Read 2 hex digits at a time
-      for (int i = 0; i < encryptedKey.length; i += 2) {
-        encryptedBytes
-            .add(int.parse(encryptedKey.substring(i, i + 2), radix: 16));
-      }
-
-      final decryptedBytes = List<int>.generate(
-        encryptedBytes.length,
-        (i) => encryptedBytes[i] ^ secretBytes[i % secretBytes.length],
-      );
-
-      return latin1.decode(decryptedBytes);
-    } catch (e) {
-      print('Error during decryption: $e');
-      return '';
-    }
-  }
-
   Future<void> _authenticateDevice(
       BluetoothDevice device, String deviceId) async {
     try {
@@ -86,16 +63,11 @@ class BleManager {
       }
       final deviceDoc = deviceDocs.docs.first;
 
-      final secretKey = deviceDoc.data()['secret_key'] as String?;
+      final secretKey = deviceDoc.data()['secret_key']['secret'] as String?;
       if (secretKey == null) {
         print('Secret key not found for device: $deviceId');
         return;
       }
-
-      final deviceProfileRef = deviceDoc.data()['profile'];
-      final deviceProfileDoc = await deviceProfileRef.get();
-      final organizationRef = deviceProfileDoc.data()['organization'];
-      final organizationDoc = await organizationRef.get();
 
       // Connection and service discovery with improved retry logic
       List<BluetoothService> services = [];
@@ -119,39 +91,53 @@ class BleManager {
         orElse: () => throw Exception('Action characteristic not found'),
       );
 
-      // Read initial data (contains encrypted API key)
+      // Read initial data (contains encrypted API key and device/profile info)
       final data = await dataCharacteristic.read();
       
-      final jsonData = String.fromCharCodes(data);
-      final Map<String, dynamic> initialData = jsonDecode(jsonData);
-      final encryptedApiKey = initialData['key'] as String;
+      final key = String.fromCharCodes(data);
+      
+      final encryptedApiKey = key as String;
+            
+      // Parse the secret key to get the three components
+      final secretKeyParts = secretKey.split('-');
+      if (secretKeyParts.length != 3) {
+        print('Invalid secret key format: $secretKey');
+        device.disconnect();
+        return;
+      }
+
+      final secretDeviceId = secretKeyParts[1];
+      final actualApiKey = secretKeyParts[2];
 
       // Decode the API key
       final decodedApiKey = _decodeApiKey(encryptedApiKey, secretKey);
       print('Decoded Key: $decodedApiKey');
 
-      // Verify API key exists in Firestore
-      final apiKeyQuery = await _db
-          .collection('organizations')
-          .doc(organizationDoc.id)
-          .collection('api_keys')
-          .where('key', isEqualTo: decodedApiKey)
-          .limit(1)
-          .get();
+      // Make API call to verify the key matches
+      final response = await http.get(
+        Uri.parse('https://api.medibound.com/device/confirmKey?deviceId=$secretDeviceId&key=$decodedApiKey'),
+      );
 
-      if (apiKeyQuery.docs.isEmpty) {
-        print('Invalid API key for device: $deviceId');
+      final responseData = jsonDecode(response.body);
+      if (!responseData['success']) {
+        print('API verification failed');
         device.disconnect();
         return;
       }
 
-      // Send authentication command
-      final authAction = 'auth $decodedApiKey';
+      if (!responseData['isMatch']) {
+        print('API key mismatch');
+        device.disconnect();
+        return;
+      }
+
+      // Send authentication command with the actual API key
+      final authAction = 'auth $actualApiKey';
       await actionCharacteristic.write(utf8.encode(authAction));
       print('Device authenticated successfully: $deviceId');
 
       // Set device status to ready after successful authentication
-      final mediboundClient = DeviceClient(baseUrl: 'https://api.medibound.com', apiKey: decodedApiKey);
+      final mediboundClient = DeviceClient(baseUrl: 'https://api.medibound.com', apiKey: actualApiKey);
       await mediboundClient.setStatus(deviceId.substring(2), DeviceStatus.ready);
 
       // Set up characteristic notifications
@@ -172,6 +158,33 @@ class BleManager {
         _connectedDevices.remove(storedDeviceId);
         _deviceIdentifiers.remove(bleId);
       }
+    }
+  }
+
+  // Helper function to decode the encrypted API key
+  String _decodeApiKey(String encryptedKey, String secretKey) {
+    try {
+      // For decryption, we need to use the full secret key
+      final secretBytes = latin1.encode(secretKey);
+      final encryptedBytes = <int>[];
+
+      // Read 2 hex digits at a time
+      for (int i = 0; i < encryptedKey.length; i += 2) {
+        if (i + 1 < encryptedKey.length) {
+          encryptedBytes
+              .add(int.parse(encryptedKey.substring(i, i + 2), radix: 16));
+        }
+      }
+
+      final decryptedBytes = List<int>.generate(
+        encryptedBytes.length,
+        (i) => encryptedBytes[i] ^ secretBytes[i % secretBytes.length],
+      );
+
+      return latin1.decode(decryptedBytes);
+    } catch (e) {
+      print('Error during decryption: $e');
+      return '';
     }
   }
 
