@@ -96,11 +96,13 @@ class BleManager {
       // Make API call to verify the key matches
       final user = _auth.currentUser;
       final idToken = await user?.getIdToken() ?? '';
+      final fullSecretKey = '$deviceId-$rawApiKey';
+
 
       print('ID Token: $idToken');
       
       final response = await http.get(
-        Uri.parse('https://api.medibound.com/device/confirmKey?deviceId=${deviceId.substring(2)}&key=$rawApiKey'),
+        Uri.parse('https://api.medibound.com/device/confirmKey?secretKey=$fullSecretKey'),
         headers: {
           'Authorization': 'Bearer $idToken',
           'Content-Type': 'application/json',
@@ -125,8 +127,9 @@ class BleManager {
       await actionCharacteristic.write(utf8.encode(authAction));
       print('Device authenticated successfully: $deviceId');
 
+
       // Set device status to ready after successful authentication
-      final mediboundClient = DeviceClient(baseUrl: 'https://api.medibound.com', apiKey: rawApiKey);
+      final mediboundClient = DeviceClient(baseUrl: 'https://api.medibound.com', apiKey: fullSecretKey);
       await mediboundClient.setStatus(deviceId.substring(2), DeviceStatus.ready);
 
       // Set up characteristic notifications
@@ -150,33 +153,7 @@ class BleManager {
     }
   }
 
-  // Helper function to decode the encrypted API key
-  String _decodeApiKey(String encryptedKey, String secretKey) {
-    try {
-      // For decryption, we need to use the full secret key
-      final secretBytes = latin1.encode(secretKey);
-      final encryptedBytes = <int>[];
-
-      // Read 2 hex digits at a time
-      for (int i = 0; i < encryptedKey.length; i += 2) {
-        if (i + 1 < encryptedKey.length) {
-          encryptedBytes
-              .add(int.parse(encryptedKey.substring(i, i + 2), radix: 16));
-        }
-      }
-
-      final decryptedBytes = List<int>.generate(
-        encryptedBytes.length,
-        (i) => encryptedBytes[i] ^ secretBytes[i % secretBytes.length],
-      );
-
-      return latin1.decode(decryptedBytes);
-    } catch (e) {
-      print('Error during decryption: $e');
-      return '';
-    }
-  }
-
+  
   Future<void> _setupCharacteristicNotifications(
       BluetoothService service, DeviceClient client, String deviceId) async {
     try {

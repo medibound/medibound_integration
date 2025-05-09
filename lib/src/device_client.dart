@@ -24,7 +24,6 @@ class DeviceClient {
       Uri.parse('$baseUrl/device/setStatus'),
       headers: _headers,
       body: jsonEncode({
-        'deviceId': deviceId,
         'status': status.value,
       }),
     );
@@ -40,7 +39,6 @@ class DeviceClient {
       Uri.parse('$baseUrl/device/setMode'),
       headers: _headers,
       body: jsonEncode({
-        'deviceId': deviceId,
         'mode': mode.value,
       }),
     );
@@ -56,7 +54,6 @@ class DeviceClient {
       Uri.parse('$baseUrl/device/setAction'),
       headers: _headers,
       body: jsonEncode({
-        'deviceId': deviceId,
         'action': action.value,
       }),
     );
@@ -72,7 +69,6 @@ class DeviceClient {
       Uri.parse('$baseUrl/device/sendRecord'),
       headers: _headers,
       body: jsonEncode({
-        'deviceId': deviceId,
         'jsonData': record,
       }),
     );
@@ -95,7 +91,6 @@ class DeviceClient {
       Uri.parse('$baseUrl/device/updateRecord'),
       headers: _headers,
       body: jsonEncode({
-        'deviceId': deviceId,
         'recordId': recordId,
         'updates': updates,
       }),

@@ -1,6 +1,6 @@
 name: medibound_integration
 description: "All of medibound's integrations in one package"
-version: 0.0.42
+version: 0.0.44
 homepage:
 
 environment:
