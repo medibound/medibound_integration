@@ -96,7 +96,7 @@ class BleManager {
       // Make API call to verify the key matches
       final user = _auth.currentUser;
       final idToken = await user?.getIdToken() ?? '';
-      final fullSecretKey = '$deviceId-$rawApiKey';
+      final fullSecretKey = '${deviceId.substring(2)}-$rawApiKey';
 
 
       print('ID Token: $idToken');
