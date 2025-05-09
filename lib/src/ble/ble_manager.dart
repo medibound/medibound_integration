@@ -88,12 +88,23 @@ class BleManager {
       final data = await dataCharacteristic.read();
       
       final key = String.fromCharCodes(data);
+
+      print('Key: $key');
       
-      final rawApiKey = key as String;
+      final rawApiKey = key;
         
       // Make API call to verify the key matches
+      final user = _auth.currentUser;
+      final idToken = await user?.getIdToken() ?? '';
+
+      print('ID Token: $idToken');
+      
       final response = await http.get(
-        Uri.parse('https://api.medibound.com/device/confirmKey?deviceId=$deviceId&key=$rawApiKey'),
+        Uri.parse('https://api.medibound.com/device/confirmKey?deviceId=${deviceId.substring(2)}&key=$rawApiKey'),
+        headers: {
+          'Authorization': 'Bearer $idToken',
+          'Content-Type': 'application/json',
+        },
       );
 
       final responseData = jsonDecode(response.body);
